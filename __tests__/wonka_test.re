@@ -19,10 +19,10 @@ describe("source factories", () => {
         }
       });
 
-      let talkback = ref((_: Wonka_types.talkbackT) => ());
+      let talkback = ref(Wonka_helpers.talkbackPlaceholder);
       let signals = [||];
 
-      source(signal => {
+      source((. signal) => {
         switch (signal) {
         | Start(x) => talkback := x;
         | Push(_) => ignore(Js.Array.push(signal, signals));
@@ -30,10 +30,10 @@ describe("source factories", () => {
         };
       });
 
-      talkback^(Pull);
-      talkback^(Pull);
-      talkback^(Pull);
-      talkback^(Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
 
       expect(signals) |> toEqual([| Push(0), Push(1), End |]);
     });
@@ -45,10 +45,10 @@ describe("source factories", () => {
 
     it("sends list items to a puller sink", () => {
       let source = Wonka.fromList([10, 20, 30]);
-      let talkback = ref((_: Wonka_types.talkbackT) => ());
+      let talkback = ref(Wonka_helpers.talkbackPlaceholder);
       let signals = [||];
 
-      source(signal => {
+      source((. signal) => {
         switch (signal) {
         | Start(x) => talkback := x;
         | Push(_) => ignore(Js.Array.push(signal, signals));
@@ -56,10 +56,10 @@ describe("source factories", () => {
         };
       });
 
-      talkback^(Pull);
-      talkback^(Pull);
-      talkback^(Pull);
-      talkback^(Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
 
       expect(signals) == [| Push(10), Push(20), Push(30), End |];
     });
@@ -71,18 +71,18 @@ describe("source factories", () => {
 
     it("sends array items to a puller sink", () => {
       let source = Wonka.fromArray([| 10, 20, 30 |]);
-      let talkback = ref((_: Wonka_types.talkbackT) => ());
+      let talkback = ref(Wonka_helpers.talkbackPlaceholder);
       let signals = ref([||]);
 
-      source(signal => {
+      source((. signal) => {
         switch (signal) {
         | Start(x) => {
           talkback := x;
-          x(Pull);
+          x(. Pull);
         }
         | Push(_) => {
           signals := Array.append(signals^, [|signal|]);
-          talkback^(Pull);
+          talkback^(. Pull);
         }
         | End => signals := Array.append(signals^, [|signal|]);
         };
@@ -94,18 +94,18 @@ describe("source factories", () => {
     it("does not blow up the stack when iterating something huge", () => {
       let arr = Array.make(100000, 123);
       let source = Wonka.fromArray(arr);
-      let talkback = ref((_: Wonka_types.talkbackT) => ());
+      let talkback = ref(Wonka_helpers.talkbackPlaceholder);
       let values = [||];
 
-      source(signal => {
+      source((. signal) => {
         switch (signal) {
         | Start(x) => {
           talkback := x;
-          x(Pull);
+          x(. Pull);
         }
         | Push(x) => {
           ignore(Js.Array.push(x, values));
-          talkback^(Pull);
+          talkback^(. Pull);
         }
         | End => ()
         };
@@ -121,10 +121,10 @@ describe("source factories", () => {
 
     it("sends a single item to a puller sink", () => {
       let source = Wonka.fromValue(123);
-      let talkback = ref((_: Wonka_types.talkbackT) => ());
+      let talkback = ref(Wonka_helpers.talkbackPlaceholder);
       let signals = [||];
 
-      source(signal => {
+      source((. signal) => {
         switch (signal) {
         | Start(x) => talkback := x;
         | Push(_) => ignore(Js.Array.push(signal, signals));
@@ -132,9 +132,9 @@ describe("source factories", () => {
         };
       });
 
-      talkback^(Pull);
-      talkback^(Pull);
-      talkback^(Pull); /* one extra to check whether no signal comes back after it has ended */
+      talkback^(. Pull);
+      talkback^(. Pull);
+      talkback^(. Pull); /* one extra to check whether no signal comes back after it has ended */
 
       expect(signals) == [| Push(123), End |];
     });
@@ -145,10 +145,10 @@ describe("source factories", () => {
     open! Expect.Operators;
 
     it("ends immediately", () => {
-      let talkback = ref((_: Wonka_types.talkbackT) => ());
+      let talkback = ref(Wonka_helpers.talkbackPlaceholder);
       let signals = [||];
 
-      Wonka.empty(signal => {
+      Wonka.empty()(. (. signal) => {
         switch (signal) {
         | Start(x) => talkback := x;
         | _ => ignore(Js.Array.push(signal, signals))
@@ -157,8 +157,8 @@ describe("source factories", () => {
 
       let _signals = Array.copy(signals);
 
-      talkback^(Pull);
-      talkback^(Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
 
       expect((_signals, signals)) == ([| End |], [| End |]);
     });
@@ -169,10 +169,10 @@ describe("source factories", () => {
     open! Expect.Operators;
 
     it("does not end", () => {
-      let talkback = ref((_: Wonka_types.talkbackT) => ());
+      let talkback = ref(Wonka_helpers.talkbackPlaceholder);
       let ended = ref(false);
 
-      Wonka.never(signal => {
+      Wonka.never()(. (. signal) => {
         switch (signal) {
         | Start(x) => talkback := x;
         | End => ended := true
@@ -180,8 +180,8 @@ describe("source factories", () => {
         };
       });
 
-      talkback^(Pull);
-      talkback^(Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
 
       expect(ended^) === false;
     });
@@ -195,28 +195,28 @@ describe("operator factories", () => {
     it("maps all emissions of a source", () => {
       let num = ref(1);
       let nums = [||];
-      let talkback = ref((_: Wonka_types.talkbackT) => ());
+      let talkback = ref(Wonka_helpers.talkbackPlaceholder);
 
       Wonka.map((_) => {
         let res = num^;
         num := num^ + 1;
         res
-      }, sink => {
-        sink(Start(signal => {
+      }, (. sink) => {
+        sink(. Start((. signal) => {
           switch (signal) {
-          | Pull => sink(Push(1));
+          | Pull => sink(. Push(1));
           | _ => ()
           }
         }));
-      }, signal => {
+      }, (. signal) => {
         switch (signal) {
         | Start(x) => {
           talkback := x;
-          x(Pull);
+          x(. Pull);
         }
         | Push(x) when num^ < 6 => {
           ignore(Js.Array.push(x, nums));
-          talkback^(Pull);
+          talkback^(. Pull);
         }
         | _ => ()
         }
@@ -252,28 +252,28 @@ describe("operator factories", () => {
     it("filters emissions according to a predicate", () => {
       let i = ref(1);
       let nums = [||];
-      let talkback = ref((_: Wonka_types.talkbackT) => ());
+      let talkback = ref(Wonka_helpers.talkbackPlaceholder);
 
-      Wonka.filter(x => x mod 2 === 0, sink => {
-        sink(Start(signal => {
+      Wonka.filter(x => x mod 2 === 0, (. sink) => {
+        sink(. Start((. signal) => {
           switch (signal) {
           | Pull => {
             let num = i^;
             i := i^ + 1;
-            sink(Push(num));
+            sink(. Push(num));
           }
           | _ => ()
           }
         }));
-      }, signal => {
+      }, (. signal) => {
         switch (signal) {
         | Start(x) => {
           talkback := x;
-          x(Pull);
+          x(. Pull);
         }
         | Push(x) when x < 6 => {
           ignore(Js.Array.push(x, nums));
-          talkback^(Pull);
+          talkback^(. Pull);
         }
         | _ => ()
         }
@@ -316,18 +316,18 @@ describe("operator factories", () => {
     open Expect;
 
     it("folds emissions using an initial seed value", () => {
-      let talkback = ref((_: Wonka_types.talkbackT) => ());
+      let talkback = ref(Wonka_helpers.talkbackPlaceholder);
       let num = ref(1);
 
-      let source = Wonka.scan((acc, x) => acc + x, 0, sink => sink(Start(signal => {
+      let source = Wonka.scan((acc, x) => acc + x, 0, (. sink) => sink(. Start((. signal) => {
         switch (signal) {
         | Pull => {
           let i = num^;
           if (i <= 3) {
             num := num^ + 1;
-            sink(Push(i));
+            sink(. Push(i));
           } else {
-            sink(End);
+            sink(. End);
           }
         }
         | _ => ()
@@ -336,17 +336,17 @@ describe("operator factories", () => {
 
       let res = [||];
 
-      source(signal => {
+      source((. signal) => {
         switch (signal) {
         | Start(x) => talkback := x
         | _ => ignore(Js.Array.push(signal, res))
         }
       });
 
-      talkback^(Pull);
-      talkback^(Pull);
-      talkback^(Pull);
-      talkback^(Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
       expect(res) |> toEqual([| Push(1), Push(3), Push(6), End |]);
     });
 
@@ -376,21 +376,21 @@ describe("operator factories", () => {
     open! Expect.Operators;
 
     it("merges different sources into a single one", () => {
-      let a = Wonka.fromList([1, 2, 3]);
-      let b = Wonka.fromList([4, 5, 6]);
-      let talkback = ref((_: Wonka_types.talkbackT) => ());
+      let a = (. s) => Wonka.fromList([1, 2, 3], s);
+      let b = (. s) => Wonka.fromList([4, 5, 6], s);
+      let talkback = ref(Wonka_helpers.talkbackPlaceholder);
       let signals = [||];
       let source = Wonka.merge([| a, b |]);
 
-      source(signal => {
+      source((. signal) => {
         switch (signal) {
         | Start(x) => {
           talkback := x;
-          x(Pull);
+          x(. Pull);
         }
         | Push(_) => {
           ignore(Js.Array.push(signal, signals));
-          talkback^(Pull);
+          talkback^(. Pull);
         }
         | End => ignore(Js.Array.push(signal, signals))
         };
@@ -425,21 +425,21 @@ describe("operator factories", () => {
     open! Expect.Operators;
 
     it("concatenates different sources into a single one", () => {
-      let a = Wonka.fromList([1, 2, 3]);
-      let b = Wonka.fromList([4, 5, 6]);
-      let talkback = ref((_: Wonka_types.talkbackT) => ());
+      let a = (. s) => Wonka.fromList([1, 2, 3], s);
+      let b = (. s) => Wonka.fromList([4, 5, 6], s);
+      let talkback = ref(Wonka_helpers.talkbackPlaceholder);
       let signals = [||];
       let source = Wonka.concat([| a, b |]);
 
-      source(signal => {
+      source((. signal) => {
         switch (signal) {
         | Start(x) => {
           talkback := x;
-          x(Pull);
+          x(. Pull);
         }
         | Push(_) => {
           ignore(Js.Array.push(signal, signals));
-          talkback^(Pull);
+          talkback^(. Pull);
         }
         | End => ignore(Js.Array.push(signal, signals))
         };
@@ -473,21 +473,21 @@ describe("operator factories", () => {
     open Expect;
 
     it("shares an underlying source with all sinks", () => {
-      let talkback = ref((_: Wonka_types.talkbackT) => ());
-      let aborterTb = ref((_: Wonka_types.talkbackT) => ());
+      let talkback = ref(Wonka_helpers.talkbackPlaceholder);
+      let aborterTb = ref(Wonka_helpers.talkbackPlaceholder);
       let num = ref(1);
       let nums = [||];
 
-      let source = Wonka.share(sink => {
-        sink(Start(signal => {
+      let source = Wonka.share((. sink) => {
+        sink(. Start((. signal) => {
           switch (signal) {
           | Pull => {
             let i = num^;
             if (i <= 2) {
               num := num^ + 1;
-              sink(Push(i));
+              sink(. Push(i));
             } else {
-              sink(End);
+              sink(. End);
             }
           }
           | _ => ()
@@ -495,35 +495,35 @@ describe("operator factories", () => {
         }));
       });
 
-      source(signal => {
+      source((. signal) => {
         switch (signal) {
         | Start(x) => talkback := x
         | _ => ignore(Js.Array.push(signal, nums))
         }
       });
 
-      source(signal => {
+      source((. signal) => {
         switch (signal) {
         | Start(_) => ()
         | _ => ignore(Js.Array.push(signal, nums))
         }
       });
 
-      source(signal => {
+      source((. signal) => {
         switch (signal) {
         | Start(tb) => aborterTb := tb
         | _ => {
           ignore(Js.Array.push(signal, nums));
-          aborterTb^(End);
+          aborterTb^(. End);
         }
         }
       });
 
-      talkback^(Pull);
+      talkback^(. Pull);
       let numsA = Array.copy(nums);
-      talkback^(Pull);
-      talkback^(Pull);
-      talkback^(Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
       expect((numsA, nums)) |> toEqual(([| Push(1), Push(1), Push(1) |], [| Push(1), Push(1), Push(1), Push(2), Push(2), End, End |]));
     });
 
@@ -552,21 +552,21 @@ describe("operator factories", () => {
     open Expect;
 
     it("combines the latest values of two sources", () => {
-      let talkback = ref((_: Wonka_types.talkbackT) => ());
+      let talkback = ref(Wonka_helpers.talkbackPlaceholder);
 
       let makeSource = (factor: int) => {
         let num = ref(1);
 
-        sink => {
-          sink(Start(signal => {
+        (. sink) => {
+          sink(. Start((. signal) => {
             switch (signal) {
             | Pull => {
               if (num^ <= 2) {
                 let i = num^ * factor;
                 num := num^ + 1;
-                sink(Push(i));
+                sink(. Push(i));
               } else {
-                sink(End);
+                sink(. End);
               }
             }
             | _ => ()
@@ -580,23 +580,23 @@ describe("operator factories", () => {
       let source = Wonka.combine(sourceA, sourceB);
       let res = [||];
 
-      source(signal => {
+      source((. signal) => {
         switch (signal) {
         | Start(x) => talkback := x
         | _ => ignore(Js.Array.push(signal, res))
         }
       });
 
-      talkback^(Pull);
-      talkback^(Pull);
-      talkback^(Pull);
-      talkback^(Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
       expect(res) |> toEqual([| Push((1, 2)), Push((2, 2)), Push((2, 4)), End |]);
     });
 
     testPromise("follows the spec for listenables", () => {
       Wonka_thelpers.testWithListenable(source => {
-        let shared = Wonka.share(source);
+        let shared = (. s) => Wonka.share(source, s);
         Wonka.combine(shared, shared)
       })
         |> Js.Promise.then_(x => {
@@ -610,7 +610,7 @@ describe("operator factories", () => {
       let end_: talkbackT = End;
 
       Wonka_thelpers.testTalkbackEnd(source => {
-        let shared = Wonka.share(source);
+        let shared = (. s) => Wonka.share(source, s);
         Wonka.combine(shared, shared)
       })
         |> Js.Promise.then_(x => {
@@ -625,15 +625,15 @@ describe("operator factories", () => {
     open Expect;
 
     it("only lets a maximum number of values through", () => {
-      let talkback = ref((_: Wonka_types.talkbackT) => ());
+      let talkback = ref(Wonka_helpers.talkbackPlaceholder);
       let num = ref(1);
 
-      let source = Wonka.take(2, sink => sink(Start(signal => {
+      let source = Wonka.take(2, (. sink) => sink(. Start((. signal) => {
         switch (signal) {
         | Pull => {
           let i = num^;
           num := num^ + 1;
-          sink(Push(i));
+          sink(. Push(i));
         }
         | _ => ()
         }
@@ -641,33 +641,33 @@ describe("operator factories", () => {
 
       let res = [||];
 
-      source(signal => {
+      source((. signal) => {
         switch (signal) {
         | Start(x) => talkback := x
         | _ => ignore(Js.Array.push(signal, res))
         }
       });
 
-      talkback^(Pull);
-      talkback^(Pull);
-      talkback^(Pull);
-      talkback^(Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
       expect(res) |> toEqual([| Push(1), Push(2), End |]);
     });
 
     it("accepts the end of the source when max number of emissions is not reached", () => {
-      let talkback = ref((_: Wonka_types.talkbackT) => ());
+      let talkback = ref(Wonka_helpers.talkbackPlaceholder);
       let num = ref(1);
 
-      let source = Wonka.take(2, sink => sink(Start(signal => {
+      let source = Wonka.take(2, (. sink) => sink(. Start((. signal) => {
         switch (signal) {
         | Pull => {
           let i = num^;
           if (i < 2) {
             num := num^ + 1;
-            sink(Push(i));
+            sink(. Push(i));
           } else {
-            sink(End);
+            sink(. End);
           }
         }
         | _ => ()
@@ -676,16 +676,16 @@ describe("operator factories", () => {
 
       let res = [||];
 
-      source(signal => {
+      source((. signal) => {
         switch (signal) {
         | Start(x) => talkback := x
         | _ => ignore(Js.Array.push(signal, res))
         }
       });
 
-      talkback^(Pull);
-      talkback^(Pull);
-      talkback^(Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
       expect(res) |> toEqual([| Push(1), End |]);
     });
 
@@ -725,33 +725,33 @@ describe("operator factories", () => {
     open Expect;
 
     it("only lets the last n values through on an entirely new source", () => {
-      let talkback = ref((_: Wonka_types.talkbackT) => ());
+      let talkback = ref(Wonka_helpers.talkbackPlaceholder);
       let num = ref(1);
 
-      let source = Wonka.takeLast(2, sink => sink(Start(signal => {
+      let source = Wonka.takeLast(2, (. sink) => sink(. Start((. signal) => {
         switch (signal) {
         | Pull when num^ <= 4 => {
           let i = num^;
           num := num^ + 1;
-          sink(Push(i));
+          sink(. Push(i));
         }
-        | Pull => sink(End)
+        | Pull => sink(. End)
         | _ => ()
         }
       })));
 
       let res = [||];
 
-      source(signal => {
+      source((. signal) => {
         switch (signal) {
         | Start(x) => talkback := x
         | _ => ignore(Js.Array.push(signal, res))
         }
       });
 
-      talkback^(Pull);
-      talkback^(Pull);
-      talkback^(Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
       expect(res) |> toEqual([| Push(3), Push(4), End |]);
     });
 
@@ -778,15 +778,15 @@ describe("operator factories", () => {
     open Expect;
 
     it("only lets the last n values through on an entirely new source", () => {
-      let talkback = ref((_: Wonka_types.talkbackT) => ());
+      let talkback = ref(Wonka_helpers.talkbackPlaceholder);
       let num = ref(1);
 
-      let source = Wonka.takeWhile(x => x <= 2, sink => sink(Start(signal => {
+      let source = Wonka.takeWhile(x => x <= 2, (. sink) => sink(. Start((. signal) => {
         switch (signal) {
         | Pull => {
           let i = num^;
           num := num^ + 1;
-          sink(Push(i));
+          sink(. Push(i));
         }
         | _ => ()
         }
@@ -794,34 +794,34 @@ describe("operator factories", () => {
 
       let res = [||];
 
-      source(signal => {
+      source((. signal) => {
         switch (signal) {
         | Start(x) => talkback := x
         | _ => ignore(Js.Array.push(signal, res))
         }
       });
 
-      talkback^(Pull);
-      talkback^(Pull);
-      talkback^(Pull);
-      talkback^(Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
 
       expect(res) |> toEqual([| Push(1), Push(2), End |]);
     });
 
     it("accepts the end of the source when max number of emissions is not reached", () => {
-      let talkback = ref((_: Wonka_types.talkbackT) => ());
+      let talkback = ref(Wonka_helpers.talkbackPlaceholder);
       let num = ref(1);
 
-      let source = Wonka.takeWhile(x => x <= 5, sink => sink(Start(signal => {
+      let source = Wonka.takeWhile(x => x <= 5, (. sink) => sink(. Start((. signal) => {
         switch (signal) {
         | Pull => {
           let i = num^;
           if (i < 2) {
             num := num^ + 1;
-            sink(Push(i));
+            sink(. Push(i));
           } else {
-            sink(End);
+            sink(. End);
           }
         }
         | _ => ()
@@ -830,16 +830,16 @@ describe("operator factories", () => {
 
       let res = [||];
 
-      source(signal => {
+      source((. signal) => {
         switch (signal) {
         | Start(x) => talkback := x
         | _ => ignore(Js.Array.push(signal, res))
         }
       });
 
-      talkback^(Pull);
-      talkback^(Pull);
-      talkback^(Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
 
       expect(res) |> toEqual([| Push(1), End |]);
     });
@@ -880,26 +880,26 @@ describe("operator factories", () => {
     open Expect;
 
     it("only lets the last n values through on an entirely new source", () => {
-      let talkback = ref((_: Wonka_types.talkbackT) => ());
-      let notify = ref((_: Wonka_types.talkbackT) => ());
+      let talkback = ref(Wonka_helpers.talkbackPlaceholder);
+      let notify = ref(Wonka_helpers.talkbackPlaceholder);
       let num = ref(1);
 
-      let notifier = sink => {
-        notify := signal => switch (signal) {
-        | Pull => sink(Push(0));
+      let notifier = (. sink) => {
+        notify := (. signal) => switch (signal) {
+        | Pull => sink(. Push(0));
         | _ => ()
         };
 
-        sink(Start((_) => ()));
+        sink(. Start((. _) => ()));
       };
 
-      let source = Wonka.takeUntil(notifier, sink => sink(Start(signal => {
+      let source = Wonka.takeUntil(notifier, (. sink) => sink(. Start((. signal) => {
         switch (signal) {
         | Pull when num^ <= 4 => {
           let i = num^;
-          if (i === 3) notify^(Pull);
+          if (i === 3) notify^(. Pull);
           num := num^ + 1;
-          sink(Push(i));
+          sink(. Push(i));
         }
         | _ => ()
         }
@@ -907,35 +907,35 @@ describe("operator factories", () => {
 
       let res = [||];
 
-      source(signal => {
+      source((. signal) => {
         switch (signal) {
         | Start(x) => talkback := x
         | _ => ignore(Js.Array.push(signal, res))
         }
       });
 
-      talkback^(Pull);
-      talkback^(Pull);
-      talkback^(Pull);
-      talkback^(Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
 
       expect(res) |> toEqual([| Push(1), Push(2), End |]);
     });
 
     it("accepts the end of the source when max number of emissions is not reached", () => {
-      let talkback = ref((_: Wonka_types.talkbackT) => ());
+      let talkback = ref(Wonka_helpers.talkbackPlaceholder);
       let num = ref(1);
-      let notifier = sink => sink(Start((_) => ()));
+      let notifier = (. sink) => sink(. Start((. _) => ()));
 
-      let source = Wonka.takeUntil(notifier, sink => sink(Start(signal => {
+      let source = Wonka.takeUntil(notifier, (. sink) => sink(. Start((. signal) => {
         switch (signal) {
         | Pull => {
           let i = num^;
           if (num^ <= 2) {
             num := num^ + 1;
-            sink(Push(i));
+            sink(. Push(i));
           } else {
-            sink(End);
+            sink(. End);
           }
         }
         | _ => ()
@@ -944,23 +944,23 @@ describe("operator factories", () => {
 
       let res = [||];
 
-      source(signal => {
+      source((. signal) => {
         switch (signal) {
         | Start(x) => talkback := x
         | _ => ignore(Js.Array.push(signal, res))
         }
       });
 
-      talkback^(Pull);
-      talkback^(Pull);
-      talkback^(Pull);
-      talkback^(Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
 
       expect(res) |> toEqual([| Push(1), Push(2), End |]);
     });
 
     testPromise("follows the spec for listenables", () => {
-      Wonka_thelpers.testWithListenable(Wonka.takeUntil(Wonka.never))
+      Wonka_thelpers.testWithListenable(Wonka.takeUntil(Wonka.never()))
         |> Js.Promise.then_(x => {
           expect(x)
             |> toEqual(([||], [| Push(1), Push(2), End |]))
@@ -971,7 +971,7 @@ describe("operator factories", () => {
     testPromise("follows the spec for listenables when ending the source", () => {
       let end_: talkbackT = End;
 
-      Wonka_thelpers.testWithListenable(Wonka.takeUntil(Wonka.fromValue(0)))
+      Wonka_thelpers.testWithListenable(Wonka.takeUntil((. s) => Wonka.fromValue(0, s)))
         |> Js.Promise.then_(x => {
           expect(x)
             |> toEqual(([| end_ |], [| End |]))
@@ -982,7 +982,7 @@ describe("operator factories", () => {
     testPromise("ends itself and source when its talkback receives the End signal", () => {
       let end_: talkbackT = End;
 
-      Wonka_thelpers.testTalkbackEnd(Wonka.takeUntil(Wonka.never))
+      Wonka_thelpers.testTalkbackEnd(Wonka.takeUntil(Wonka.never()))
         |> Js.Promise.then_(x => {
           expect(x)
             |> toEqual(([| end_ |], [| Push(1) |]))
@@ -995,10 +995,10 @@ describe("operator factories", () => {
     open Expect;
 
     it("only lets values through after a number of values have been filtered out", () => {
-      let talkback = ref((_: Wonka_types.talkbackT) => ());
+      let talkback = ref(Wonka_helpers.talkbackPlaceholder);
       let num = ref(1);
 
-      let source = Wonka.skip(2, sink => sink(Start(signal => {
+      let source = Wonka.skip(2, sink => sink(Start((. signal) => {
         switch (signal) {
         | Pull when num^ <= 4 => {
           let i = num^;
@@ -1012,16 +1012,16 @@ describe("operator factories", () => {
 
       let res = [||];
 
-      source(signal => {
+      source((. signal) => {
         switch (signal) {
         | Start(x) => talkback := x
         | _ => ignore(Js.Array.push(signal, res))
         }
       });
 
-      talkback^(Pull);
-      talkback^(Pull);
-      talkback^(Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
       expect(res) |> toEqual([| Push(3), Push(4), End |]);
     });
 
@@ -1059,10 +1059,10 @@ describe("operator factories", () => {
     open Expect;
 
     it("only lets values through after the predicate returned false, including the first such value", () => {
-      let talkback = ref((_: Wonka_types.talkbackT) => ());
+      let talkback = ref(Wonka_helpers.talkbackPlaceholder);
       let num = ref(1);
 
-      let source = Wonka.skipWhile(x => x <= 2, sink => sink(Start(signal => {
+      let source = Wonka.skipWhile(x => x <= 2, sink => sink(Start((. signal) => {
         switch (signal) {
         | Pull when num^ <= 4 => {
           let i = num^;
@@ -1076,16 +1076,16 @@ describe("operator factories", () => {
 
       let res = [||];
 
-      source(signal => {
+      source((. signal) => {
         switch (signal) {
         | Start(x) => talkback := x
         | _ => ignore(Js.Array.push(signal, res))
         }
       });
 
-      talkback^(Pull);
-      talkback^(Pull);
-      talkback^(Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
       expect(res) |> toEqual([| Push(3), Push(4), End |]);
     });
 
@@ -1123,12 +1123,12 @@ describe("operator factories", () => {
     open Expect;
 
     it("only lets values through after the notifier emits a value", () => {
-      let talkback = ref((_: Wonka_types.talkbackT) => ());
-      let notify = ref((_: Wonka_types.talkbackT) => ());
+      let talkback = ref(Wonka_helpers.talkbackPlaceholder);
+      let notify = ref(Wonka_helpers.talkbackPlaceholder);
       let num = ref(1);
 
       let notifier = sink => {
-        notify := signal => switch (signal) {
+        notify := (. signal) => switch (signal) {
         | Pull => sink(Push(0));
         | _ => ()
         };
@@ -1136,7 +1136,7 @@ describe("operator factories", () => {
         sink(Start((_) => ()));
       };
 
-      let source = Wonka.skipUntil(notifier, (sink) => sink(Start(signal => {
+      let source = Wonka.skipUntil(notifier, (sink) => sink(Start((. signal) => {
         switch (signal) {
         | Pull when num^ <= 4 => {
           let i = num^;
@@ -1151,27 +1151,27 @@ describe("operator factories", () => {
 
       let res = [||];
 
-      source(signal => {
+      source((. signal) => {
         switch (signal) {
         | Start(x) => talkback := x
         | _ => ignore(Js.Array.push(signal, res))
         }
       });
 
-      talkback^(Pull);
-      talkback^(Pull);
-      talkback^(Pull);
-      talkback^(Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
 
       expect(res) |> toEqual([| Push(3), Push(4), End |]);
     });
 
     it("accepts the end of the source when max number of emissions is not reached", () => {
-      let talkback = ref((_: Wonka_types.talkbackT) => ());
+      let talkback = ref(Wonka_helpers.talkbackPlaceholder);
       let num = ref(1);
       let notifier = sink => sink(Start((_) => ()));
 
-      let source = Wonka.skipUntil(notifier, (sink) => sink(Start(signal => {
+      let source = Wonka.skipUntil(notifier, (sink) => sink(Start((. signal) => {
         switch (signal) {
         | Pull => {
           let i = num^;
@@ -1188,16 +1188,16 @@ describe("operator factories", () => {
 
       let res = [||];
 
-      source(signal => {
+      source((. signal) => {
         switch (signal) {
         | Start(x) => talkback := x
         | _ => ignore(Js.Array.push(signal, res))
         }
       });
 
-      talkback^(Pull);
-      talkback^(Pull);
-      talkback^(Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
 
       expect(res) |> toEqual([| End |]);
     });
@@ -1236,24 +1236,24 @@ describe("operator factories", () => {
     open Expect;
 
     it("merges the result of multiple pullables into its source", () => {
-      let talkback = ref((_: Wonka_types.talkbackT) => ());
+      let talkback = ref(Wonka_helpers.talkbackPlaceholder);
       let source = Wonka.fromList([ Wonka.fromList([ 1, 2 ]), Wonka.fromList([ 1, 2 ]) ])
         |> Wonka.flatten;
 
       let res = [||];
 
-      source(signal => {
+      source((. signal) => {
         switch (signal) {
         | Start(x) => talkback := x
         | _ => ignore(Js.Array.push(signal, res))
         }
       });
 
-      talkback^(Pull);
-      talkback^(Pull);
-      talkback^(Pull);
-      talkback^(Pull);
-      talkback^(Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
+      talkback^(. Pull);
       expect(res) |> toEqual([| Push(1), Push(2), Push(1), Push(2), End |]);
     });
   });
@@ -1268,7 +1268,7 @@ describe("sink factories", () => {
       let nums = [||];
 
       let source = sink => {
-        sink(Start(signal => {
+        sink(Start((. signal) => {
           switch (signal) {
           | Pull when i^ < 4 => {
             let num = i^;

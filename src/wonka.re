@@ -50,13 +50,15 @@ let fromValue = (x, sink) => {
   sink(. talkback);
 };
 
-let empty = sink => {
-  sink(. Start((. _) => ()));
+let empty = () => (. sink) => {
+  let talkback = (. _) => ();
+  sink(. Start(talkback));
   sink(. End);
 };
 
-let never = sink => {
-  sink(. Start((. _) => ()));
+let never = () => (. sink) => {
+  let talkback = (. _) => ();
+  sink(. Start(talkback));
 };
 
 let map = (f, source, sink) => {

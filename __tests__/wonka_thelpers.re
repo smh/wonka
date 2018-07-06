@@ -1,18 +1,18 @@
 open Wonka_types;
 
 let testWithListenable = operator => {
-  let sink = ref((_: signalT(int)) => ());
+  let sink = ref((. _: signalT(int)) => ());
   let signals = [||];
-  let source = x => {
+  let source = (. x) => {
     sink := x;
-    x(Start(signal => {
+    x(. Start((. signal) => {
       ignore(Js.Array.push(signal, signals))
     }));
   };
 
-  let talkback = ref((_: talkbackT) => ());
+  let talkback = ref(Wonka_helpers.talkbackPlaceholder);
   let res = [||];
-  operator(source)(signal => {
+  operator(source)((. signal) => {
     switch (signal) {
     | Start(x) => talkback := x
     | _ => ignore(Js.Array.push(signal, res))
@@ -20,13 +20,13 @@ let testWithListenable = operator => {
   });
 
   Js.Promise.make((~resolve, ~reject as _) => {
-    sink^(Push(1));
+    sink^(. Push(1));
     ignore(Js.Global.setTimeout(() => {
-      sink^(Push(2));
+      sink^(. Push(2));
       ignore(Js.Global.setTimeout(() => {
-        sink^(End);
+        sink^(. End);
         ignore(Js.Global.setTimeout(() => {
-          [@bs] resolve((signals, res));
+          resolve(. (signals, res));
         }, 0));
       }, 0));
     }, 0));
@@ -34,16 +34,19 @@ let testWithListenable = operator => {
 };
 
 let testTalkbackEnd = operator => {
-  let sink = ref((_: signalT(int)) => ());
+  let sink = ref((. _: signalT(int)) => ());
   let signals: array(talkbackT) = [||];
-  let source = x => {
-    x(Start(signal => ignore(Js.Array.push(signal, signals))));
+  let source = (. x) => {
+    x(. Start((. signal) => {
+      ignore(Js.Array.push(signal, signals));
+    }));
+
     sink := x;
   };
 
-  let talkback = ref((_: talkbackT) => ());
+  let talkback = ref(Wonka_helpers.talkbackPlaceholder);
   let res = [||];
-  operator(source)(signal => {
+  operator(source)((. signal) => {
     switch (signal) {
     | Start(x) => talkback := x
     | _ => ignore(Js.Array.push(signal, res))
@@ -51,12 +54,12 @@ let testTalkbackEnd = operator => {
   });
 
   Js.Promise.make((~resolve, ~reject as _) => {
-    sink^(Push(1));
+    sink^(. Push(1));
     ignore(Js.Global.setTimeout(() => {
       let end_: talkbackT = End;
-      talkback^(end_);
+      talkback^(. end_);
       ignore(Js.Global.setTimeout(() => {
-        [@bs] resolve((signals, res));
+        resolve(. (signals, res));
       }, 0));
     }, 0));
   })

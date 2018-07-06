@@ -26,10 +26,10 @@ let fromArray: (array('a), (. signalT('a)) => unit) => unit;
 let fromValue: ('a, (. signalT('a)) => unit) => unit;
 
 /* A source that ends immediately */
-let empty: ((. signalT('a)) => unit) => unit;
+let empty: unit => (. (. signalT('a)) => unit) => unit;
 
 /* A source that never ends or emits a value */
-let never: ((. signalT('a)) => unit) => unit;
+let never: unit => (. (. signalT('a)) => unit) => unit;
 
 /* -- operators */
 
