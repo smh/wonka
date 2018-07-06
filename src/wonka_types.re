@@ -32,6 +32,12 @@ type talkbackT =
   | End;
 
 type signalT('a) =
-  | Start(talkbackT => unit)
+  | Start((. talkbackT) => unit)
   | Push('a)
   | End;
+
+/* An observer with the methods `next` and `complete` */
+type observerT('a) = {.
+  next: 'a => unit,
+  complete: unit => unit
+};

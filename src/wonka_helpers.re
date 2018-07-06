@@ -1,18 +1,22 @@
 open Wonka_types;
 
-let talkbackPlaceholder = (_: talkbackT) => ();
+let talkbackPlaceholder = (. _: talkbackT) => ();
 
-let captureTalkback = (source: (signalT('a) => unit) => unit, sinkWithTalkback: [@bs] (signalT('a), talkbackT => unit) => unit) => {
+let captureTalkback = (
+  source: (. (. signalT('a)) => unit) => unit,
+  sinkWithTalkback: (. signalT('a), (. talkbackT) => unit) => unit
+) => {
   let talkback = ref(talkbackPlaceholder);
-
-  source(signal => {
+  let sink = (. signal) => {
     switch (signal) {
     | Start(x) => talkback := x
     | _ => ()
     };
 
-    [@bs] sinkWithTalkback(signal, talkback^)
-  });
+    sinkWithTalkback(. signal, talkback^)
+  };
+
+  source(. sink);
 };
 
 type trampolineT = {
@@ -21,7 +25,10 @@ type trampolineT = {
   mutable gotSignal: bool
 };
 
-let makeTrampoline = (sink: signalT('a) => unit, f: [@bs] unit => option('a)) => {
+let makeTrampoline = (
+  sink: (. signalT('a)) => unit,
+  f: (. unit) => option('a)
+) => {
   let state: trampolineT = {
     exhausted: false,
     inLoop: false,
@@ -30,15 +37,15 @@ let makeTrampoline = (sink: signalT('a) => unit, f: [@bs] unit => option('a)) =>
 
   let loop = () => {
     let rec explode = () =>
-      switch ([@bs] f()) {
+      switch (f(.)) {
       | Some(x) => {
         state.gotSignal = false;
-        sink(Push(x));
+        sink(. Push(x));
         if (state.gotSignal) explode();
       }
       | None => {
         state.exhausted = true;
-        sink(End)
+        sink(. End)
       }
       };
 
@@ -47,7 +54,7 @@ let makeTrampoline = (sink: signalT('a) => unit, f: [@bs] unit => option('a)) =>
     state.inLoop = false;
   };
 
-  sink(Start(signal => {
+  let startSignal = Start((. signal) => {
     switch (signal, state.exhausted) {
     | (Pull, false) => {
       state.gotSignal = true;
@@ -55,5 +62,7 @@ let makeTrampoline = (sink: signalT('a) => unit, f: [@bs] unit => option('a)) =>
     }
     | _ => ()
     }
-  }));
+  });
+
+  sink(. startSignal);
 };
